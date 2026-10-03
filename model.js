@@ -25,3 +25,6 @@ export function validate(doc){
 export function canEdit(doc,profile){return ['Draft','Rejected'].includes(doc.status)&&(profile.role==='admin'||doc.created_by===profile.id);}
 export function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 export function csv(rows){return rows.map(row=>row.map(v=>{let s=String(v??'');if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';}).join(',')).join('\r\n');}
+
+export const hasPricing = type => ['QUOTATION','PO','INVOICE'].includes(type);
+export const quantityLabel = type => ({IR:'Required quantity',PR:'Requested quantity',DO:'Delivered quantity',GRN:'Received quantity',INSPECTION:'Inspected quantity',GATE_PASS:'Movement quantity'})[type] || 'Quantity';
