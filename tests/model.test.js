@@ -1,0 +1,13 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {totals,validate,canEdit,csv,esc,parentType,nextType} from '../model.js';
+const valid=()=>({type:'IR',title:'Server hardware',department:'IT',date:'2026-10-03',items:[{description:'SSD',qty:2,rate:12500}],tax:18,extra:{}});
+test('calculates item totals and tax',()=>assert.deepEqual(totals(valid().items,18),{subtotal:25000,tax:4500,total:29500}));
+test('requires linked source and vendor on purchase order',()=>{const d={...valid(),type:'PO'};assert.throws(()=>validate(d),/source/);d.parent_id='q';assert.throws(()=>validate(d),/party/);d.party='Vendor';assert.equal(validate(d),true);});
+test('rejects invalid quantities and tax',()=>{const d=valid();d.items[0].qty=-1;assert.throws(()=>validate(d));d.items[0].qty=1;d.tax=101;assert.throws(()=>validate(d));});
+test('returnable gate pass needs return date; inspection needs result',()=>{const d={...valid(),type:'GATE_PASS',extra:{pass_type:'Returnable'}};assert.throws(()=>validate(d),/return/);d.extra.expected_return='2026-10-10';assert.equal(validate(d),true);d.type='INSPECTION';d.parent_id='grn';assert.throws(()=>validate(d),/inspection/);});
+test('approved records cannot be edited by administrator',()=>assert.equal(canEdit({status:'Approved',created_by:'u'},{id:'a',role:'admin'}),false));
+test('staff cannot edit another user draft',()=>assert.equal(canEdit({status:'Draft',created_by:'a'},{id:'b',role:'user'}),false));
+test('CSV neutralizes spreadsheet formula input and escapes quotes',()=>assert.equal(csv([['=HYPERLINK("x")','ok']]),'"\'=HYPERLINK(""x"")","ok"'));
+test('HTML escaping prevents stored markup',()=>assert.equal(esc('<script>"&'), '&lt;script&gt;&quot;&amp;'));
+test('complete procurement chain preserves expected links',()=>{let t='IR',seen=[];while(t){seen.push(t);const next=nextType[t];if(next)assert.equal(parentType[next],t);t=next;}assert.deepEqual(seen,['IR','PR','QUOTATION','PO','DO','GRN','INSPECTION','INVOICE']);});
